@@ -1,11 +1,34 @@
-import keyboard
-from time import sleep, time
+from abc import abstractmethod
 from os import system
 from random import choice, randint
+from time import sleep, time
+
+import keyboard
+
+
+COUNT_COLS_X = 6
+COUNT_ROWS_Y = 18
+
+GRAFIKA = "0"
+COUNT_UP_SPEED = 15
+MAX_SPEED = 0.6
+START_SPEED = 1
+SPEED_UP = 0.05
+
+KEY_DOWN = "s"
+KEY_LEFT = "a"
+KEY_RIGHT = "d"
+KEY_ROTATE = "r"
 
 
 class Block:
-    pos_1 = pos_2 = pos_3 = pos_4 = None
+    def __init__(self):
+        self.pos_1 = [0, 0]
+        self.pos_2 = [0, 0]
+        self.pos_3 = [0, 0]
+        self.pos_4 = [0, 0]
+        self.rotate_now = 0
+        self.max_rotate = 0
 
     def get(self):
         return self.pos_1, self.pos_2, self.pos_3, self.pos_4
@@ -28,6 +51,14 @@ class Block:
         self.pos_3[0] += 1
         self.pos_4[0] += 1
 
+    def rotate(self):
+        self.pos_1, self.pos_2, self.pos_3, self.pos_4 = self.get_rotate()
+        self.rotate_now = self.rotate_now + 1 if self.rotate_now + 1 <= self.max_rotate else 0
+
+    @abstractmethod
+    def get_rotate(self):
+        pass
+
 
 class Square(Block):
     """
@@ -36,9 +67,10 @@ class Square(Block):
     [.][.][.]
     """
     max_range = 2
-    max_rotate = 0
 
     def __init__(self, pos):
+        super().__init__()
+
         self.pos_1 = [0, pos]
         self.pos_2 = [0, pos + 1]
         self.pos_3 = [1, pos]
@@ -60,15 +92,16 @@ class BlockOne(Block):
     [.][.][1]
     """
     max_range = 2
-    max_rotate = 3
 
     def __init__(self, pos):
+        super().__init__()
         self.pos_1 = [1, pos]
         self.pos_2 = [0, pos + 1]
         self.pos_3 = [1, pos + 1]
         self.pos_4 = [2, pos + 1]
 
         self.rotate_now = 0
+        self.max_rotate = 3
 
     def get_rotate(self):
         rotate = self.rotate_now + 1 if self.rotate_now + 1 <= self.max_rotate else 0
@@ -89,10 +122,6 @@ class BlockOne(Block):
 
         return res
 
-    def rotate(self):
-        self.pos_1, self.pos_2, self.pos_3, self.pos_4 = self.get_rotate()
-        self.rotate_now = self.rotate_now + 1 if self.rotate_now + 1 <= self.max_rotate else 0
-
 
 class BlockTwo(Block):
     """
@@ -102,15 +131,17 @@ class BlockTwo(Block):
     """
 
     max_range = 2
-    max_rotate = 3
 
     def __init__(self, pos):
+        super().__init__()
+
         self.pos_1 = [0, pos]
         self.pos_2 = [0, pos + 1]
         self.pos_3 = [1, pos + 1]
         self.pos_4 = [2, pos + 1]
 
         self.rotate_now = 0
+        self.max_rotate = 3
 
     def get_rotate(self):
         rotate = self.rotate_now + 1 if self.rotate_now + 1 <= self.max_rotate else 0
@@ -129,25 +160,23 @@ class BlockTwo(Block):
 
         return res
 
-    def rotate(self):
-        self.pos_1, self.pos_2, self.pos_3, self.pos_4 = self.get_rotate()
-        self.rotate_now = self.rotate_now + 1 if self.rotate_now + 1 <= self.max_rotate else 0
-
 
 class Line(Block):
     """
     [1][1][1][1]
     """
-    max_rotate = 1
     max_range = 4
 
     def __init__(self, pos):
+        super().__init__()
+
         self.pos_1 = [0, pos]
         self.pos_2 = [0, pos + 1]
         self.pos_3 = [0, pos + 2]
         self.pos_4 = [0, pos + 3]
 
         self.rotate_now = 0
+        self.max_rotate = 1
 
     def get_rotate(self):
         rotate = self.rotate_now + 1 if self.rotate_now + 1 <= self.max_rotate else 0
@@ -162,41 +191,36 @@ class Line(Block):
 
         return res
 
-    def rotate(self):
-        self.pos_1, self.pos_2, self.pos_3, self.pos_4 = self.get_rotate()
-        self.rotate_now = self.rotate_now + 1 if self.rotate_now + 1 <= self.max_rotate else 0
-
 
 class Tetris:
     matrix_place = list()
-    speed = 1
+    speed = START_SPEED
     block = None
     count = 0
 
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.matrix_place = [['.' for _ in range(self.x)] for _ in range(self.y)]
-        self.full_len = ['1' for _ in range(self.x)]
-        self.create_block()
+    def __init__(self):
+        self.matrix_place = [['.' for _ in range(COUNT_COLS_X)] for _ in range(COUNT_ROWS_Y)]
+        self.full_len = [GRAFIKA for _ in range(COUNT_COLS_X)]
+
+        self.score = 0
 
     def play(self):
         time_now = time()
         while time() - time_now < self.speed:
             sleep(0.1)
-            if keyboard.is_pressed("s"):
+            if keyboard.is_pressed(KEY_DOWN):
                 break
-            elif keyboard.is_pressed("a") and self.check_left():
+            elif keyboard.is_pressed(KEY_LEFT) and self.check_left():
                 self.remove()
                 self.block.move_left()
                 self.place()
                 self.print()
-            elif keyboard.is_pressed("d") and self.check_right():
+            elif keyboard.is_pressed(KEY_RIGHT) and self.check_right():
                 self.remove()
                 self.block.move_right()
                 self.place()
                 self.print()
-            elif keyboard.is_pressed("r") and self.check_rotate():
+            elif keyboard.is_pressed(KEY_ROTATE) and self.check_rotate():
                 self.remove()
                 self.block.rotate()
                 self.place()
@@ -208,8 +232,10 @@ class Tetris:
             self.place()
         else:
             self.count += 1
-            if self.count >= 10:
-                self.speed -= 0.05
+            if self.count >= COUNT_UP_SPEED:
+                self.speed -= SPEED_UP
+                self.speed = max((self.speed, MAX_SPEED))
+                self.count = 0
 
             self.check_full()
             self.check_end()
@@ -219,22 +245,29 @@ class Tetris:
 
     def print(self):
         system("cls")
-        for i in self.matrix_place:
+        print(self.matrix_place[0], f"score = {self.score}")
+        for i in self.matrix_place[1:]:
             print(i)
 
     def place(self):
+        """
+        Place block in matrix_place
+        """
         for y, x in self.block.get():
-            self.matrix_place[y][x] = '1'
+            self.matrix_place[y][x] = GRAFIKA
 
     def remove(self):
+        """
+        Remove block in matrix_place
+        """
         for y, x in self.block.get():
             self.matrix_place[y][x] = '.'
 
     def check_rotate(self):
         res = True
         for y, x in self.block.get_rotate():
-            if y >= self.y or x >= self.x or x < 0 or (
-                    self.matrix_place[y][x] == '1' and [y, x] not in self.block.get()):
+            if y >= COUNT_ROWS_Y or x >= COUNT_COLS_X or x < 0 or (
+                    self.matrix_place[y][x] == GRAFIKA and [y, x] not in self.block.get()):
                 res = False
                 break
         return res
@@ -243,25 +276,27 @@ class Tetris:
         res = True
         pos = self.block.get()
         for y, x in pos:
-            if y + 1 >= self.y or self.matrix_place[y + 1][x] == '1' and [y + 1, x] not in pos:
+            if y + 1 >= COUNT_ROWS_Y or self.matrix_place[y + 1][x] == GRAFIKA and [y + 1, x] not in pos:
                 res = False
-
+                break
         return res
 
     def check_left(self):
         res = True
         pos = self.block.get()
         for y, x in pos:
-            if x - 1 < 0 or self.matrix_place[y][x - 1] == '1' and [y, x - 1] not in pos:
+            if x - 1 < 0 or self.matrix_place[y][x - 1] == GRAFIKA and [y, x - 1] not in pos:
                 res = False
+                break
         return res
 
     def check_right(self):
         res = True
         pos = self.block.get()
         for y, x in pos:
-            if x + 1 >= self.x or self.matrix_place[y][x + 1] == '1' and [y, x + 1] not in pos:
+            if x + 1 >= COUNT_COLS_X or self.matrix_place[y][x + 1] == GRAFIKA and [y, x + 1] not in pos:
                 res = False
+                break
         return res
 
     def check_end(self):
@@ -274,21 +309,29 @@ class Tetris:
                 break
 
     def check_full(self):
+        """
+        Check if matrix_place has full row and remove it, then add score
+        """
         while self.full_len in self.matrix_place:
             self.matrix_place.remove(self.full_len)
-            self.matrix_place.insert(0, ['.' for _ in range(self.x)])
+            self.matrix_place.insert(0, ['.' for _ in range(COUNT_COLS_X)])
+            self.score += int(100 * (1-self.speed + 1))
 
     def create_block(self):
+        """
+        Create random block in random range
+        """
         block = choice((Square, Line, BlockOne, BlockTwo))
-        self.block = block(randint(0, self.x - block.max_range))
+        self.block = block(randint(0, COUNT_COLS_X - block.max_range))
         self.place()
 
     def clear(self):
-        self.matrix_place = [['.' for _ in range(self.x)] for _ in range(self.y)]
-        self.speed = 1
+        self.matrix_place = [['.' for _ in range(COUNT_COLS_X)] for _ in range(COUNT_ROWS_Y)]
+        self.speed = START_SPEED
 
 
 if __name__ == "__main__":
-    game = Tetris(6, 18)
+    game = Tetris()
+    game.create_block()
     while True:
         game.play()
